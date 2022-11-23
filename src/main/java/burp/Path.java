@@ -26,6 +26,6 @@ public class Path {
            "/v2/api-docs",
            "/api-docs",
            "/swagger-ui.html",
-           "/swagger-ui/index.html"
+           "/swagger-ui/index.html",
    };
 }

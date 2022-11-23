@@ -32,6 +32,30 @@ public class MainTab {
         this.burpExtender = burpExtender;
         $$$setupUI$$$();
 
+        //表格加入一键清理
+        vulTable.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (SwingUtilities.isRightMouseButton(e)) {
+                    Point clickPoint = e.getPoint();
+                    int rowAtPoint = vulTable.rowAtPoint(clickPoint);
+                    if (rowAtPoint == -1){
+                        return;
+                    }
+
+                    JPopupMenu popupMenu = new JPopupMenu();
+                    JMenuItem clean = new JMenuItem(new AbstractAction("clear data") {
+                        @Override
+                        public void actionPerformed(ActionEvent e) {
+                            burpExtender.getTableMode().clearRow();
+                        }
+                    });
+                    popupMenu.add(clean);
+                    popupMenu.show(e.getComponent(), e.getX(), e.getY());
+                }
+            }
+        });
+
         //输入框添加消息提示
         urlInfo.setForeground(Color.gray);
         urlInfo.addFocusListener(new FocusListener() {
