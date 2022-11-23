@@ -1,9 +1,12 @@
 package burp;
 
 import lombok.Data;
+import ui.MainTab;
+import util.HttpUtil;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.*;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
@@ -12,8 +15,8 @@ import java.util.List;
 public class BurpExtender implements IBurpExtender, ITab, IMessageEditorController, IHttpListener {
     private IBurpExtenderCallbacks callbacks;
     private IExtensionHelpers helpers;
-    private  PrintWriter stdout;  //输出数据
-    private JSplitPane root;    //UI界面的主界面
+    private PrintWriter stdout;  //输出数据
+    private JPanel rootPanel;    //UI的被动扫描界面
     private TableMode tableMode;
     private Table vulInfoTable;
     private IMessageEditor requestViewer;
@@ -35,30 +38,22 @@ public class BurpExtender implements IBurpExtender, ITab, IMessageEditorControll
         callbacks.registerHttpListener(this);
 
         //新建一个线程来运行UI界面
+        buildUi();
+    }
+
+    public void buildUi() {
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
-                //新建一个根界面以及表格
-                root = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
                 tableMode = new TableMode();
-                vulInfoTable = new Table(BurpExtender.this);
-                JScrollPane scrollPane = new JScrollPane(vulInfoTable);
-                root.setLeftComponent(scrollPane);
+                requestViewer = callbacks.createMessageEditor(BurpExtender.this,false);
+                responseViewer = callbacks.createMessageEditor(BurpExtender.this,false);
 
-                JTabbedPane tabs = new JTabbedPane();
-                requestViewer = callbacks.createMessageEditor(BurpExtender.this, false);
-                responseViewer = callbacks.createMessageEditor(BurpExtender.this, false);
-                tabs.addTab("Request", requestViewer.getComponent());
-                tabs.addTab("Response", responseViewer.getComponent());
-                root.setRightComponent(tabs);
-
-                //设置界面类型的风格与burp的一样
-                callbacks.customizeUiComponent(root);
-                callbacks.customizeUiComponent(vulInfoTable);
-                callbacks.customizeUiComponent(scrollPane);
-                callbacks.customizeUiComponent(tabs);
-
-                //注册扩展的组件
+                rootPanel = new JPanel();
+                MainTab ui = new MainTab(BurpExtender.this);
+                rootPanel.add(ui.$$$getRootComponent$$$());
+                rootPanel.setLayout(new GridLayout(1, 1));
+                callbacks.customizeUiComponent(rootPanel);
                 callbacks.addSuiteTab(BurpExtender.this);
             }
         });
@@ -73,7 +68,7 @@ public class BurpExtender implements IBurpExtender, ITab, IMessageEditorControll
     //Itab内实现的方法，返回一个界面展示
     @Override
     public Component getUiComponent() {
-        return root;
+        return rootPanel;
     }
 
     @Override
@@ -94,8 +89,9 @@ public class BurpExtender implements IBurpExtender, ITab, IMessageEditorControll
 
     /**
      * IHttpListener接口必须实现的方法
-     * @param i 此参数为从哪个模块过来的流量; 此处是用的4，即proxy过来的流量
-     * @param b 此参数为该次数据流到底是请求服务的流量还是服务响应的流量
+     *
+     * @param i                    此参数为从哪个模块过来的流量; 此处是用的4，即proxy过来的流量
+     * @param b                    此参数为该次数据流到底是请求服务的流量还是服务响应的流量
      * @param iHttpRequestResponse 此次数据的请求数据和响应数据
      */
     @Override
@@ -115,23 +111,33 @@ public class BurpExtender implements IBurpExtender, ITab, IMessageEditorControll
 
     /**
      * 检测请求的是否满足pauload
+     *
      * @param iHttpRequestResponse
      */
     public void checkVul(IHttpRequestResponse iHttpRequestResponse) {
         List<String> header = helpers.analyzeRequest(iHttpRequestResponse).getHeaders();
         List<String> result = bulidUrl(header);
+        if (result == null) {
+            return;
+        }
         for (String info : result) {
             header.set(0, info);
             byte[] newMessage = helpers.buildHttpMessage(header, null);
             String url = String.valueOf(helpers.analyzeRequest(iHttpRequestResponse.getHttpService(), newMessage).getUrl());
 
-            if (tableMode.contiansUrl(url)){
+            if (tableMode.contiansUrl(url)) {
                 continue;
             }
 
             IHttpRequestResponse resp = this.callbacks.makeHttpRequest(iHttpRequestResponse.getHttpService(), newMessage);
-            if (isGood(resp)){
-                tableMode.addRow(new VulData(url, String.valueOf(helpers.bytesToString(resp.getResponse()).length()), "true", resp));
+            //判断返回值是否是200
+            if (helpers.analyzeResponse(resp.getResponse()).getStatusCode() == 200) {
+                //判断返回的内容是否符合POC
+                if (isGood(helpers.bytesToString(resp.getResponse()).toLowerCase())) {
+                    if (!tableMode.contiansUrl(url)) {
+                        tableMode.addRow(new VulData(url, String.valueOf(helpers.bytesToString(resp.getResponse()).length()), "true", resp));
+                    }
+                }
             }
         }
     }
@@ -139,6 +145,7 @@ public class BurpExtender implements IBurpExtender, ITab, IMessageEditorControll
     /**
      * 返回请求头的第一行即【GET /xxx/xxx HTTP/1.1】这种
      * 函数主要就是接收原来的请求头，然后切割第一行的数据，加工拼接上相关的payload
+     *
      * @param headers
      * @return
      */
@@ -152,8 +159,8 @@ public class BurpExtender implements IBurpExtender, ITab, IMessageEditorControll
             String[] data = header[1].split("/");
 
             //当链接为根目录时 data的长度就会为0 此时直接添加并返回
-            if (data.length == 0){
-                for (String info : Path.payloads){
+            if (data.length == 0) {
+                for (String info : Path.payloads) {
                     result.add("GET " + info + " " + header[2]);
                 }
                 return result;
@@ -162,7 +169,7 @@ public class BurpExtender implements IBurpExtender, ITab, IMessageEditorControll
             //段连接只取前面的一个目录作为字典
             if (data.length <= 2) {
                 //添加根目录作为爆破字典
-                for (String info : Path.payloads){
+                for (String info : Path.payloads) {
                     result.add("GET " + info + " " + header[2]);
                 }
                 //添加一级目录再加上字典爆破
@@ -171,7 +178,7 @@ public class BurpExtender implements IBurpExtender, ITab, IMessageEditorControll
                 }
             } else {    //长链接取前面两个目录作为爆破字典
                 //添加根目录作为爆破字典
-                for (String info : Path.payloads){
+                for (String info : Path.payloads) {
                     result.add("GET " + info + " " + header[2]);
                 }
                 //一级目录加上payload的目录爆破
@@ -187,18 +194,22 @@ public class BurpExtender implements IBurpExtender, ITab, IMessageEditorControll
         }
     }
 
-    public Boolean isGood(IHttpRequestResponse result){
-        String data = helpers.bytesToString(result.getResponse()).toLowerCase();
-        if (helpers.analyzeResponse(result.getResponse()).getStatusCode() == 200 && (helpers.analyzeResponse(result.getResponse()).getStatedMimeType() == "JSON" || helpers.analyzeResponse(result.getResponse()).getStatedMimeType() == "HTML")){
-            if (data.contains("swagger-ui.css") || data.contains("******") || data.contains("swaggerversion") ||
-                    data.contains("actuator/info") || data.contains("actuator/health") || data.contains("profiles") ||
-                    data.contains("basepath") || data.contains("springfox-swagger-ui")){
-                return true;
-            }else {
-                return false;
-            }
-        }else {
+    /**
+     * 判断此次请求是否符合结果
+     *
+     * @param result
+     * @return
+     */
+    public Boolean isGood(String result) {
+        String data = result;
+        if (data.contains("swagger-ui.css") || data.contains("******") || data.contains("swaggerversion") ||
+                data.contains("actuator/info") || data.contains("actuator/health") || data.contains("profiles") ||
+                data.contains("\"swagger\"")) {
+            return true;
+        } else {
             return false;
         }
+
     }
+
 }

@@ -8,7 +8,6 @@ import java.util.List;
 
 @Data
 public class TableMode extends AbstractTableModel {
-    private BurpExtender burpExtender;
     private List<VulData> vulData = new ArrayList<VulData>();
     private String tableHeader[] = {"#","URL","ResultSize","Issue"};
     @Override
