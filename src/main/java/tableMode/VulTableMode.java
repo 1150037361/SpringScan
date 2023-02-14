@@ -1,5 +1,6 @@
-package burp;
+package tableMode;
 
+import burp.VulData;
 import lombok.Data;
 
 import javax.swing.table.AbstractTableModel;
@@ -7,7 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Data
-public class TableMode extends AbstractTableModel {
+public class VulTableMode extends AbstractTableModel {
     private List<VulData> vulData = new ArrayList<VulData>();
     private String tableHeader[] = {"#","URL","ResultSize","Issue"};
     @Override

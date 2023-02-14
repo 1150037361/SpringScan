@@ -1,25 +1,44 @@
-import org.apache.commons.httpclient.HttpClient;
-import org.apache.commons.httpclient.URIException;
-import org.apache.commons.httpclient.methods.GetMethod;
-
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
 
 public class TestRequest {
-    public static void main(String[] args) throws URIException {
-        HttpClient httpClient = new HttpClient();
-        GetMethod getMethod = new GetMethod("http://www.baidu.com/index.html");
-        getMethod.addRequestHeader("accept","*/*");
-        getMethod.addRequestHeader("Content-Type","application/x-www-form-urlencoded");
-        getMethod.addRequestHeader("User-Agent","Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36");
-        String result = "";
+    public static void main(String[] args) throws IOException {
+        String url = "https://www.example.com/";
+        List<String> results = getUrlChildren(url, 2);
+
+        for (int i = 0; i< results.size();i++) {
+            results.set(i, results.get(i) + " HTTP/1.1");
+        }
+
+        results.forEach(s -> System.out.println(s));
+    }
+
+    public static List<String> getUrlChildren(String urlStr, Integer n) {
         try {
-            int code = httpClient.executeMethod(getMethod);
-            if (code == 200){
-                result = getMethod.getResponseBodyAsString();
-                System.out.println(result);
+            List<String> subdirectories = new ArrayList<>();
+            URL url = new URL(urlStr);
+            String path = url.getPath();
+            String[] parts = path.split("/");
+            if (parts.length < n) {
+                subdirectories.add("GET ");
+                return subdirectories;
+            } else {
+                StringBuilder sb = new StringBuilder();
+                sb.append("GET ");
+                for (int i = 1; i <= n && i < parts.length; i++) {
+                    sb.append("/");
+                    sb.append(parts[i]);
+                    subdirectories.add(sb.toString());
+                }
+                return  subdirectories;
             }
-        } catch (IOException e) {
-            e.printStackTrace();
+        } catch (MalformedURLException e) {
+            System.out.println("Invalid URL");
+            return null;
         }
     }
 }

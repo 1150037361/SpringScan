@@ -1,7 +1,7 @@
 package burp;
 
 public class Path {
-   final static String[] payloads={
+   public final static String[] payloads={
            "/actuator",
            "/manage",
            "/manage/env",
@@ -28,4 +28,16 @@ public class Path {
            "/swagger-ui.html",
            "/swagger-ui/index.html",
    };
+
+   public final static String[] values={
+           "swagger-ui.css",
+           "******",
+           "swaggerversion",
+           "actuator/info",
+           "actuator/health",
+           "profiles",
+           "swagger"
+   };
+
+
 }
