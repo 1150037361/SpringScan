@@ -1,6 +1,6 @@
 package tableMode;
 
-import burp.VulData;
+import entity.VulData;
 import lombok.Data;
 
 import javax.swing.table.AbstractTableModel;
@@ -59,6 +59,4 @@ public class VulTableMode extends AbstractTableModel {
         }
         return false;
     }
-
-    //public Boolean
 }

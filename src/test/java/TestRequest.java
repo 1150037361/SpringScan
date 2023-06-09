@@ -3,18 +3,12 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Consumer;
 
 public class TestRequest {
     public static void main(String[] args) throws IOException {
-        String url = "https://www.example.com/";
-        List<String> results = getUrlChildren(url, 2);
-
-        for (int i = 0; i< results.size();i++) {
-            results.set(i, results.get(i) + " HTTP/1.1");
-        }
-
-        results.forEach(s -> System.out.println(s));
+        String data = "https://www.onstar.com.cn/mssos/sos/mobileaggr/v2/api-docs";
+        URL url = new URL(data);
+        System.out.println(url.getPath());
     }
 
     public static List<String> getUrlChildren(String urlStr, Integer n) {
@@ -34,6 +28,7 @@ public class TestRequest {
                     sb.append(parts[i]);
                     subdirectories.add(sb.toString());
                 }
+                subdirectories.add("GET ");
                 return  subdirectories;
             }
         } catch (MalformedURLException e) {

@@ -1,7 +1,7 @@
 package tableMode;
 
+import burp.BurpExtender;
 import burp.Path;
-import burp.VulData;
 import lombok.Data;
 
 import javax.swing.table.AbstractTableModel;
@@ -13,9 +13,12 @@ import java.util.List;
 public class PathTableMode extends AbstractTableModel {
     private List<String> pathData;
     private String tableHeader[] = {"Path"};
+    private BurpExtender burpExtender;
 
-    public PathTableMode() {
-        pathData = new ArrayList<>(Arrays.asList(Path.fullPath));
+    public PathTableMode() {}
+
+    public PathTableMode(BurpExtender burpExtender) {
+        this.burpExtender = burpExtender;
     }
 
     @Override
@@ -47,37 +50,35 @@ public class PathTableMode extends AbstractTableModel {
     public void addRow(String data) {
         this.pathData.add(data);
         fireTableRowsInserted(pathData.size(), pathData.size());
+        saveConfig();
     }
 
     public void editRow(String data, int rowIndex) {
         pathData.set(rowIndex, data);
         fireTableDataChanged();
+        saveConfig();
     }
 
     public void removeRow(int rowIndex) {
         this.pathData.remove(rowIndex);
         fireTableRowsDeleted(rowIndex, rowIndex);
+        saveConfig();
     }
 
     public void clearRow() {
         this.pathData.clear();
         fireTableRowsDeleted(pathData.size(), pathData.size());
+        saveConfig();
     }
 
     public void setDefaultPath() {
         pathData = new ArrayList<>(Arrays.asList(Path.fullPath));
         fireTableDataChanged();
+        saveConfig();
     }
 
-    public Boolean contiansUrl(String url) {
-        if (pathData == null) {
-            return false;
-        }
-        for (String info : pathData) {
-            if (url.equals(info)) {
-                return true;
-            }
-        }
-        return false;
+    public void saveConfig() {
+        burpExtender.getConfig().put("path",pathData);
+        burpExtender.saveConfigToJson();
     }
 }

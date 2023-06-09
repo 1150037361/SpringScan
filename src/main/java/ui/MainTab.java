@@ -1,14 +1,13 @@
 package ui;
 
+import exTable.ApiTable;
 import burp.BurpExtender;
-import burp.Path;
-import burp.Table;
+import exTable.Table;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
 import tableMode.PathTableMode;
 import tableMode.ValueTableMode;
-import util.HttpUtil;
 
 import javax.swing.*;
 import javax.swing.plaf.FontUIResource;
@@ -16,6 +15,8 @@ import javax.swing.table.TableColumn;
 import javax.swing.text.StyleContext;
 import java.awt.*;
 import java.awt.event.*;
+import java.io.IOException;
+import java.net.URISyntaxException;
 import java.util.Locale;
 
 public class MainTab {
@@ -24,16 +25,7 @@ public class MainTab {
     private JPanel rootPanel;
     private Table vulTable;
     private JTabbedPane requestPanel;
-    private JTextField urlInfo;
-    private JButton search;
-    private JTextArea resultData;
-    private JProgressBar proccessInfo;
-    private JLabel labUrl;
-    private JScrollPane textPanel;
-    private JLabel labProccess;
-    private JPanel searchPanel;
     private JSplitPane bdScanPanel;
-    private JPanel zdScanPanel;
     private JPanel configPanel;
     private JPanel pathPanel;
     private JPanel indexPanel;
@@ -59,6 +51,11 @@ public class MainTab {
     private JPanel valueConfigInfoPanel;
     private JButton pathdefaultConfButton;
     private JButton valuedefaultConfButton;
+    public JCheckBox scanEnableCheckBox;
+    public JCheckBox scanSlowCheckBox;
+    private JSplitPane analysisPanel;
+    private JTabbedPane apiRequestInfoPanel;
+    private ApiTable apiInfoTable;
 
     private PathTableMode pathTableMode;
     private ValueTableMode valueTableMode;
@@ -70,7 +67,7 @@ public class MainTab {
     }
 
     //无参构造
-    public MainTab() {
+    public MainTab() throws IOException, URISyntaxException {
         $$$setupUI$$$();
         pathTableMode = new PathTableMode();
         valueTableMode = new ValueTableMode();
@@ -80,58 +77,6 @@ public class MainTab {
 
         valueTable.setModel(valueTableMode);
 
-        //输入框添加消息提示
-        urlInfo.setForeground(Color.gray);
-        urlInfo.addFocusListener(new FocusListener() {
-            @Override
-            public void focusGained(FocusEvent e) {
-                if (urlInfo.getText().equals("请输入链接: http://www.baidu.com")) {
-                    urlInfo.setText("");
-                    urlInfo.setForeground(Color.black);
-                }
-            }
-
-            @Override
-            public void focusLost(FocusEvent e) {
-                if (urlInfo.getText().equals("")) {
-                    urlInfo.setForeground(Color.gray); //将提示文字设置为灰色
-                    urlInfo.setText("请输入链接: http://www.baidu.com");     //显示提示文字
-                }
-            }
-        });
-
-        //按钮添加监听
-        this.search.addActionListener(new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                scanBurpApi();
-            }
-        });
-
-
-        //返回框添加右键的一键清理,以及禁止编辑
-        resultData.setEditable(false);
-        this.resultData.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                if (SwingUtilities.isRightMouseButton(e)) {
-                    JPopupMenu popupMenu = new JPopupMenu();
-                    JMenuItem clean = new JMenuItem(new AbstractAction("clear data") {
-                        @Override
-                        public void actionPerformed(ActionEvent e) {
-                            resultData.setText("");
-                        }
-                    });
-                    popupMenu.add(clean);
-                    popupMenu.show(e.getComponent(), e.getX(), e.getY());
-                }
-            }
-        });
-
-        //进度条设置
-        proccessInfo.setMinimum(0);
-        proccessInfo.setMaximum(Path.fullPath.length);
-        proccessInfo.setStringPainted(true);
 
         /**
          * -----------------------------------------------------------------------------------------------------
@@ -258,58 +203,6 @@ public class MainTab {
             }
         });
 
-        //输入框添加消息提示
-        urlInfo.setForeground(Color.gray);
-        urlInfo.addFocusListener(new FocusListener() {
-            @Override
-            public void focusGained(FocusEvent e) {
-                if (urlInfo.getText().equals("请输入链接: http://www.baidu.com")) {
-                    urlInfo.setText("");
-                    urlInfo.setForeground(Color.black);
-                }
-            }
-
-            @Override
-            public void focusLost(FocusEvent e) {
-                if (urlInfo.getText().equals("")) {
-                    urlInfo.setForeground(Color.gray); //将提示文字设置为灰色
-                    urlInfo.setText("请输入链接: http://www.baidu.com");     //显示提示文字
-                }
-            }
-        });
-
-        //按钮添加监听
-        this.search.addActionListener(new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                scanBurpApi();
-            }
-        });
-
-
-        //返回框添加右键的一键清理,以及禁止编辑
-        resultData.setEditable(false);
-        this.resultData.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                if (SwingUtilities.isRightMouseButton(e)) {
-                    JPopupMenu popupMenu = new JPopupMenu();
-                    JMenuItem clean = new JMenuItem(new AbstractAction("clear data") {
-                        @Override
-                        public void actionPerformed(ActionEvent e) {
-                            resultData.setText("");
-                        }
-                    });
-                    popupMenu.add(clean);
-                    popupMenu.show(e.getComponent(), e.getX(), e.getY());
-                }
-            }
-        });
-
-        //进度条设置
-        proccessInfo.setMinimum(0);
-        proccessInfo.setMaximum(Path.fullPath.length);
-        proccessInfo.setStringPainted(true);
 
         /**
          * -----------------------------------------------------------------------------------------------------
@@ -424,30 +317,12 @@ public class MainTab {
 //        requestPanel.addTab("Response",burpExtender.getResponseViewer().getComponent());
 
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException, URISyntaxException {
         JFrame frame = new JFrame("MainTab");
         frame.setContentPane(new MainTab().rootPanel);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.pack();
         frame.setVisible(true);
-    }
-
-    /**
-     * 判断此次请求是否符合结果
-     *
-     * @param result
-     * @return
-     */
-    public Boolean isGood(String result) {
-        String data = result;
-        if (data.contains("swagger-ui.css") || data.contains("******") || data.contains("swaggerversion") ||
-                data.contains("actuator/info") || data.contains("actuator/health") || data.contains("profiles") ||
-                data.contains("\"swagger\"")) {
-            return true;
-        } else {
-            return false;
-        }
-
     }
 
 
@@ -466,38 +341,26 @@ public class MainTab {
         bdScanPanel = new JSplitPane();
         bdScanPanel.setContinuousLayout(false);
         bdScanPanel.setOrientation(0);
-        tabPanel.addTab("被动扫描", bdScanPanel);
+        tabPanel.addTab("扫描信息", bdScanPanel);
         final JScrollPane scrollPane1 = new JScrollPane();
         bdScanPanel.setLeftComponent(scrollPane1);
         vulTable = new Table(burpExtender);
         scrollPane1.setViewportView(vulTable);
         requestPanel = new JTabbedPane();
-        requestPanel.addTab("Request", burpExtender.getRequestViewer().getComponent());
-        requestPanel.addTab("Response", burpExtender.getResponseViewer().getComponent());
+        requestPanel.addTab("Request",burpExtender.getRequestViewer().getComponent());
+        requestPanel.addTab("Response",burpExtender.getResponseViewer().getComponent());
         bdScanPanel.setRightComponent(requestPanel);
-        zdScanPanel = new JPanel();
-        zdScanPanel.setLayout(new GridLayoutManager(4, 1, new Insets(0, 0, 0, 0), -1, -1));
-        tabPanel.addTab("主动扫描", zdScanPanel);
-        searchPanel = new JPanel();
-        searchPanel.setLayout(new GridLayoutManager(1, 3, new Insets(8, 5, 4, 5), -1, -1));
-        zdScanPanel.add(searchPanel, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
-        labUrl = new JLabel();
-        labUrl.setText("URL：");
-        searchPanel.add(labUrl, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        urlInfo = new JTextField();
-        searchPanel.add(urlInfo, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
-        search = new JButton();
-        search.setText("start");
-        searchPanel.add(search, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        textPanel = new JScrollPane();
-        zdScanPanel.add(textPanel, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
-        resultData = new JTextArea();
-        textPanel.setViewportView(resultData);
-        proccessInfo = new JProgressBar();
-        zdScanPanel.add(proccessInfo, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        labProccess = new JLabel();
-        labProccess.setText("0/0");
-        zdScanPanel.add(labProccess, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        analysisPanel = new JSplitPane();
+        analysisPanel.setOrientation(0);
+        tabPanel.addTab("接口分析", analysisPanel);
+        final JScrollPane scrollPane2 = new JScrollPane();
+        analysisPanel.setLeftComponent(scrollPane2);
+        apiInfoTable = new ApiTable(burpExtender);
+        scrollPane2.setViewportView(apiInfoTable);
+        apiRequestInfoPanel = new JTabbedPane();
+        apiRequestInfoPanel.addTab("Request",burpExtender.getApiRequestViewer().getComponent());
+        apiRequestInfoPanel.addTab("Response",burpExtender.getApiResponseViewer().getComponent());
+        analysisPanel.setRightComponent(apiRequestInfoPanel);
         configPanel = new JPanel();
         configPanel.setLayout(new GridLayoutManager(4, 1, new Insets(0, 0, 0, 0), -1, -1));
         tabPanel.addTab("配置信息", configPanel);
@@ -563,13 +426,13 @@ public class MainTab {
         Font label3Font = this.$$$getFont$$$(null, Font.BOLD, 16, label3.getFont());
         if (label3Font != null) label3.setFont(label3Font);
         label3.setForeground(new Color(-39373));
-        label3.setText("扫描深度配置");
+        label3.setText("扫描配置");
         panel3.add(label3, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_NORTHWEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label4 = new JLabel();
-        label4.setText("配置扫描路径的级数，默认为2级，建议配置为2-3级，多配置可能会导致内存占用过高");
+        label4.setText("配置扫描路径的级数，默认为2级，建议配置为2-3级，多配置可能会导致内存占用过高，慢速模式在目标有相关云waf下开启，避免被封IP");
         panel3.add(label4, new GridConstraints(1, 0, 1, 2, GridConstraints.ANCHOR_NORTHWEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JPanel panel4 = new JPanel();
-        panel4.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
+        panel4.setLayout(new GridLayoutManager(3, 3, new Insets(0, 0, 0, 0), -1, -1));
         indexPanel.add(panel4, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         final JLabel label5 = new JLabel();
         label5.setText("扫描级数：");
@@ -586,6 +449,19 @@ public class MainTab {
         defaultComboBoxModel1.addElement("6");
         scanIndexBox.setModel(defaultComboBoxModel1);
         panel4.add(scanIndexBox, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JLabel label6 = new JLabel();
+        label6.setText("被动扫描：");
+        panel4.add(label6, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        scanEnableCheckBox = new JCheckBox();
+        scanEnableCheckBox.setSelected(true);
+        scanEnableCheckBox.setText("启动");
+        panel4.add(scanEnableCheckBox, new GridConstraints(1, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JLabel label7 = new JLabel();
+        label7.setText("慢速模式：");
+        panel4.add(label7, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        scanSlowCheckBox = new JCheckBox();
+        scanSlowCheckBox.setText("启动");
+        panel4.add(scanSlowCheckBox, new GridConstraints(2, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JSeparator separator1 = new JSeparator();
         indexPanel.add(separator1, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
         valuePanel = new JPanel();
@@ -620,23 +496,23 @@ public class MainTab {
         valuedefaultConfButton = new JButton();
         valuedefaultConfButton.setText("Default Conf");
         panel7.add(valuedefaultConfButton, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final JScrollPane scrollPane2 = new JScrollPane();
-        panel6.add(scrollPane2, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_NORTHWEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        final JScrollPane scrollPane3 = new JScrollPane();
+        panel6.add(scrollPane3, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_NORTHWEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
         valueTable = new JTable();
         valueTable.setPreferredScrollableViewportSize(new Dimension(400, 200));
-        scrollPane2.setViewportView(valueTable);
+        scrollPane3.setViewportView(valueTable);
         valueDescriptionPanel = new JPanel();
         valueDescriptionPanel.setLayout(new GridLayoutManager(2, 1, new Insets(10, 0, 0, 0), -1, -1));
         valuePanel.add(valueDescriptionPanel, new GridConstraints(1, 0, 1, 2, GridConstraints.ANCHOR_NORTH, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
-        final JLabel label6 = new JLabel();
-        Font label6Font = this.$$$getFont$$$(null, Font.BOLD, 16, label6.getFont());
-        if (label6Font != null) label6.setFont(label6Font);
-        label6.setForeground(new Color(-39373));
-        label6.setText("匹配值配置");
-        valueDescriptionPanel.add(label6, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final JLabel label7 = new JLabel();
-        label7.setText("此处配置的是上方扫描路径扫描后的结果是否包含该表内的字符串，包含则添加结果，否则不添加");
-        valueDescriptionPanel.add(label7, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JLabel label8 = new JLabel();
+        Font label8Font = this.$$$getFont$$$(null, Font.BOLD, 16, label8.getFont());
+        if (label8Font != null) label8.setFont(label8Font);
+        label8.setForeground(new Color(-39373));
+        label8.setText("匹配值配置");
+        valueDescriptionPanel.add(label8, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JLabel label9 = new JLabel();
+        label9.setText("此处配置的是上方扫描路径扫描后的结果是否包含该表内的字符串，包含则添加结果，否则不添加");
+        valueDescriptionPanel.add(label9, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JSeparator separator2 = new JSeparator();
         valuePanel.add(separator2, new GridConstraints(0, 0, 1, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
         final Spacer spacer3 = new Spacer();
@@ -670,33 +546,6 @@ public class MainTab {
      */
     public JComponent $$$getRootComponent$$$() {
         return rootPanel;
-    }
-
-    public void testButton() {
-        resultData.append("test button\n");
-    }
-
-    public void scanBurpApi() {
-        String url = urlInfo.getText();
-        if (url.endsWith("/")) {
-            url = url.substring(0, url.length() - 1);
-        }
-
-        String finalUrl = url;
-        new Thread(() -> {
-            for (int i = 0; i < Path.fullPath.length; i++) {
-                String result = HttpUtil.doGet(finalUrl + Path.fullPath[i]);
-
-                //进度条设置
-                proccessInfo.setValue(i + 1);
-                labProccess.setText(String.valueOf(i + 1) + "/" + String.valueOf(proccessInfo.getMaximum()));
-
-                //判断是否符合POC
-                if (isGood(result.toLowerCase())) {
-                    resultData.append(finalUrl + Path.fullPath[i] + "\n");
-                }
-            }
-        }).start();
     }
 
 }

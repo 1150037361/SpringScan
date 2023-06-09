@@ -1,5 +1,6 @@
 package tableMode;
 
+import burp.BurpExtender;
 import burp.Path;
 import lombok.Data;
 
@@ -12,10 +13,13 @@ import java.util.List;
 public class ValueTableMode extends AbstractTableModel {
     private List<String> valueData;
     private String tableHeader[] = {"Value"};
+    private BurpExtender burpExtender;
 
-    public ValueTableMode() {
-        valueData = new ArrayList<>(Arrays.asList(Path.values));
+    public ValueTableMode() {}
+    public ValueTableMode(BurpExtender burpExtender) {
+        this.burpExtender = burpExtender;
     }
+
     @Override
     public int getRowCount() {
         return valueData.size();
@@ -43,37 +47,35 @@ public class ValueTableMode extends AbstractTableModel {
     public void addRow(String  data){
         this.valueData.add(data);
         fireTableRowsInserted(valueData.size(), valueData.size());
+        saveConfig();
     }
 
     public void editRow(String data, int rowIndex) {
         valueData.set(rowIndex, data);
         fireTableDataChanged();
+        saveConfig();
     }
 
     public void clearRow(){
         this.valueData.clear();
         fireTableRowsDeleted(valueData.size(), valueData.size());
+        saveConfig();
     }
 
     public void removeRow(int rowIndex) {
         this.valueData.remove(rowIndex);
         fireTableRowsDeleted(rowIndex, rowIndex);
+        saveConfig();
     }
 
     public void setDefaultValue() {
         valueData = new ArrayList<>(Arrays.asList(Path.values));
         fireTableDataChanged();
+        saveConfig();
     }
 
-    public Boolean contiansUrl(String url){
-        if (valueData == null){
-            return false;
-        }
-        for (String info: valueData){
-            if (url.equals(info)){
-                return true;
-            }
-        }
-        return false;
+    public void saveConfig() {
+        burpExtender.getConfig().put("value",valueData);
+        burpExtender.saveConfigToJson();
     }
 }

@@ -1,4 +1,7 @@
-package burp;
+package exTable;
+
+import burp.BurpExtender;
+import entity.VulData;
 
 import javax.swing.*;
 
