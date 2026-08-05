@@ -36,7 +36,7 @@ public class BurpExtender implements IBurpExtender, ITab, IMessageEditorControll
     private JSONObject config = new JSONObject();
     private IBurpExtenderCallbacks callbacks;
     public IExtensionHelpers helpers;
-    private PrintWriter stdout;  //输出数据
+    public static PrintWriter stdout;  //输出数据
     private JPanel rootPanel;
 
     private VulTableMode vulTableMode;
@@ -198,7 +198,7 @@ public class BurpExtender implements IBurpExtender, ITab, IMessageEditorControll
                     //慢速模式将线程添加到线程池
                     if (ui.scanSlowCheckBox.isSelected()) {
                         try {
-                            sleep(200);
+                            sleep(Integer.parseInt(ui.timeTextField.getText()));
                         } catch (InterruptedException e) {
                             e.printStackTrace();
                         }
@@ -233,18 +233,24 @@ public class BurpExtender implements IBurpExtender, ITab, IMessageEditorControll
 
             if (ui.scanSlowCheckBox.isSelected()) {
                 try {
-                    sleep(100);
+                    sleep(Integer.parseInt(ui.timeTextField.getText()));
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
             }
             IHttpRequestResponse resp = this.callbacks.makeHttpRequest(iHttpRequestResponse.getHttpService(), newMessage);
             //判断返回值是否是200
-            if (helpers.analyzeResponse(resp.getResponse()).getStatusCode() == 200) {
+            // 网络层请求失败时 Burp 返回的 response 为 null，跳过该请求避免空指针
+            if (resp == null || resp.getResponse() == null) {
+                stdout.println("request failed: " + url);
+                continue;
+            }
+            byte[] responseBytes = resp.getResponse();
+            if (helpers.analyzeResponse(responseBytes).getStatusCode() == 200) {
                 //判断返回的内容是否符合POC
-                if (isGood(helpers.bytesToString(resp.getResponse()).toLowerCase())) {
+                if (isGood(helpers.bytesToString(responseBytes).toLowerCase())) {
                     if (!vulTableMode.contiansUrl(url)) {
-                        vulTableMode.addRow(new VulData(url, String.valueOf(helpers.bytesToString(resp.getResponse()).length()), "true", new HttpRequestResponse(resp, BurpExtender.this)));
+                        vulTableMode.addRow(new VulData(url, String.valueOf(responseBytes.length), "true", new HttpRequestResponse(resp, BurpExtender.this)));
                     }
                 }
             }
@@ -262,9 +268,10 @@ public class BurpExtender implements IBurpExtender, ITab, IMessageEditorControll
 
         for (ApiPathInfo pathInfo : allApiPath) {
             HttpRequestResponse data = buildRequest(pathInfo, iHttpRequestResponse);
-            apiTableMode.addRow(new ApiData(pathInfo.method.toUpperCase(), data.getPath(), pathInfo.summary, data));
+            apiTableMode.addRow(new ApiData(pathInfo.method.toUpperCase(),data.getPath(), pathInfo.path, pathInfo.summary, data));
         }
     }
+
 
     /**
      * 返回请求头的第一行即【GET /xxx/xxx HTTP/1.1】这种
@@ -302,14 +309,12 @@ public class BurpExtender implements IBurpExtender, ITab, IMessageEditorControll
         newRquest = buildApiHeader(newRquest, apiPathInfo);
 
         //URL内的参数,这里不知道为什么helps的addParameter方法失效了，自己写了给方法
-        stdout.println("add parameter");
         if (apiPathInfo.parametesQueue.size() != 0) {
             for (Map.Entry<String, String> param : apiPathInfo.parametesQueue.entrySet()) {
                 newRquest = addParam(newRquest, param.getKey(), param.getValue());
             }
         }
         //header内的参数
-        stdout.println("add header");
         if (apiPathInfo.parametesHeader.size() != 0) {
             List<String> headers = helpers.analyzeRequest(newRquest).getHeaders();
             for (Map.Entry<String, String> header : apiPathInfo.parametesHeader.entrySet()) {
@@ -318,7 +323,6 @@ public class BurpExtender implements IBurpExtender, ITab, IMessageEditorControll
             newRquest = helpers.buildHttpMessage(headers, null);
         }
         //body内的参数
-        stdout.println("add body");
         if (apiPathInfo.parametesBody != null) {
             newRquest = helpers.buildHttpMessage(helpers.analyzeRequest(newRquest).getHeaders(), JSON.toJSONBytes(apiPathInfo.parametesBody));
         }

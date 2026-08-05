@@ -11,7 +11,7 @@ import java.util.List;
 
 @Data
 public class PathTableMode extends AbstractTableModel {
-    private List<String> pathData;
+    private List<String> pathData = new ArrayList<>();
     private String tableHeader[] = {"Path"};
     private BurpExtender burpExtender;
 
@@ -68,13 +68,13 @@ public class PathTableMode extends AbstractTableModel {
     public void clearRow() {
         this.pathData.clear();
         fireTableRowsDeleted(pathData.size(), pathData.size());
-        saveConfig();
+        //saveConfig();
     }
 
     public void setDefaultPath() {
         pathData = new ArrayList<>(Arrays.asList(Path.fullPath));
         fireTableDataChanged();
-        saveConfig();
+//        saveConfig();
     }
 
     public void saveConfig() {

@@ -11,7 +11,7 @@ import java.util.List;
 
 @Data
 public class ValueTableMode extends AbstractTableModel {
-    private List<String> valueData;
+    private List<String> valueData = new ArrayList<>();
     private String tableHeader[] = {"Value"};
     private BurpExtender burpExtender;
 
@@ -58,7 +58,7 @@ public class ValueTableMode extends AbstractTableModel {
 
     public void clearRow(){
         this.valueData.clear();
-        fireTableRowsDeleted(valueData.size(), valueData.size());
+        fireTableDataChanged();
         saveConfig();
     }
 

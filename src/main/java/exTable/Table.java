@@ -14,6 +14,9 @@ public class Table extends JTable {
     public Table() {
     }
 
+    public void setBurpExtender(BurpExtender burpExtender) {
+        this.burpExtender = burpExtender;
+    }
     public Table(BurpExtender burpExtender) {
         super(burpExtender.getVulTableMode());
         this.burpExtender = burpExtender;

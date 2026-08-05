@@ -2,86 +2,93 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import entity.ApiPathInfo;
+import util.ApiAnalysis;
 import util.HttpUtil;
 
+import java.io.IOException;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 
 public class Test {
 
-    public static void main(String[] args)  {
-        List<ApiPathInfo> apiInfo = new ArrayList<>();
-        Map<String,String> paramBody = new HashMap<>();
-        Map<String,String> paramHeader = new HashMap<>();
-        Map<String,String> paramQuery = new HashMap<>();
-        List<ApiPathInfo> apis = new ArrayList<>();
-        String url = "https://www.onstar.com.cn/mssos/sos/mobileaggr/v2/api-docs";
-        String result = HttpUtil.doGet(url);
-        JSONObject api = JSON.parseObject(result);
-        String basePath = (String) api.get("basePath");
-        JSONObject definitionsJson = api.getJSONObject("definitions");   //definitions的JSON数据
-        JSONObject definitionsData = new JSONObject();
+    public static void main(String[] args) throws Exception {
+        String url1 = "https://ors.chinapost-life.com/ors/auth/graph";
+        String url2 = "https://ors.chinapost-life.com/";
+        URL url = new URL(url2);
+        System.out.println(url.getPath());
+    }
 
-        for (String key : definitionsJson.keySet()) {
-            definitionsData.put(key.toLowerCase(), definitionsJson.get(key));
+    /**
+     * 命令行参数转 URL：带协议的直接使用，否则按本地文件处理。
+     */
+    private static URL toUrl(String input) throws Exception {
+        if (input.contains("://")) {
+            return new URL(input);
         }
+        return new URL("file:///" + input.replace("\\", "/"));
+    }
 
-
-        JSONObject apiPath = (JSONObject) api.get("paths");  //paths的json数据
-
-        //获取key
-        for (Map.Entry<String,Object> pathEntry: apiPath.entrySet()) {
-            String path = pathEntry.getKey();
-            JSONObject pathJson = (JSONObject) pathEntry.getValue();
-            //获取请求方法
-            for (Map.Entry<String,Object> methodEntry: pathJson.entrySet()){
-                String method = methodEntry.getKey();   //请求方法
-                JSONObject methodJson = (JSONObject) methodEntry.getValue();    //请求方法内部json数据
-                String reuqestSummary = (String) methodJson.get("summary");     //接口描述
-                String contentType = methodJson.getJSONArray("produces").getString(0);  //contentType类型
-
-                JSONArray parameters = methodJson.getJSONArray("parameters");   //字段属性
-
-                //判断字段是否为空
-                if (parameters == null) {
-                    continue;
-                }
-
-                //循环获取字段内的属性
-                for (int i = 0; i < parameters.size(); i++) {
-                    JSONObject dataJson = JSONObject.parseObject(parameters.getString(i));
-
-                    String parameterPosition = (String) dataJson.get("in");  //字段的位置
-
-                    if (parameterPosition.equals("header")) {
-                        paramHeader.put(dataJson.getString("name"),dataJson.getString("type"));
-                    } else if (parameterPosition.equals("body")) {
-                        if (dataJson.containsKey("schema")) {
-                            JSONObject data2 = definitionsData.getJSONObject(dataJson.getString("name").toLowerCase());
-                            if (data2 !=null) {
-                                JSONObject data3 = data2.getJSONObject("properties");
-                                for (Map.Entry<String, Object> param: data3.entrySet()) {
-                                    JSONObject test = (JSONObject) param.getValue();
-                                    paramBody.put(param.getKey(),test.getString("type"));
-                                }
-                            }
-                        } else {
-                            paramBody.put(dataJson.getString("name"),dataJson.getString("type"));
-                        }
-                    } else if (parameterPosition.equals("query")) {
-                        paramQuery.put(dataJson.getString("name"),dataJson.getString("type"));
-                    }
-                }
-                apis.add(new ApiPathInfo(basePath,path,method,contentType,paramBody,paramHeader,paramQuery,reuqestSummary));
-            }
-
-        }
-
-        for (ApiPathInfo data: apis) {
-            System.out.println(data.path);
-        }
-
-
-
+    /**
+     * 内置一份 Swagger 2.0 样例，写入临时文件后返回 file URL，方便无网络时测试。
+     */
+    private static URL sampleSwaggerUrl() throws IOException {
+        String[] lines = {
+                "{",
+                "  \"swagger\": \"2.0\",",
+                "  \"info\": {\"title\": \"Petstore\", \"version\": \"1.0.0\"},",
+                "  \"host\": \"petstore.swagger.io\",",
+                "  \"schemes\": [\"https\"],",
+                "  \"basePath\": \"/v2\",",
+                "  \"paths\": {",
+                "    \"/pet\": {",
+                "      \"post\": {",
+                "        \"summary\": \"Add a new pet\",",
+                "        \"consumes\": [\"application/json\"],",
+                "        \"parameters\": [",
+                "          {\"in\": \"body\", \"name\": \"body\", \"required\": true, \"schema\": {\"$ref\": \"#/definitions/Pet\"}},",
+                "          {\"in\": \"header\", \"name\": \"X-API-Key\", \"type\": \"string\"}",
+                "        ],",
+                "        \"responses\": {\"200\": {\"description\": \"ok\"}}",
+                "      }",
+                "    },",
+                "    \"/pet/findByStatus\": {",
+                "      \"get\": {",
+                "        \"summary\": \"Finds pets by status\",",
+                "        \"parameters\": [",
+                "          {\"in\": \"query\", \"name\": \"status\", \"type\": \"array\", \"items\": {\"type\": \"string\"}}",
+                "        ],",
+                "        \"responses\": {\"200\": {\"description\": \"ok\"}}",
+                "      }",
+                "    },",
+                "    \"/pet/{petId}\": {",
+                "      \"get\": {",
+                "        \"summary\": \"Find pet by ID\",",
+                "        \"parameters\": [",
+                "          {\"in\": \"path\", \"name\": \"petId\", \"required\": true, \"type\": \"integer\"}",
+                "        ],",
+                "        \"responses\": {\"200\": {\"description\": \"ok\"}}",
+                "      }",
+                "    }",
+                "  },",
+                "  \"definitions\": {",
+                "    \"Pet\": {",
+                "      \"type\": \"object\",",
+                "      \"properties\": {",
+                "        \"id\": {\"type\": \"integer\"},",
+                "        \"name\": {\"type\": \"string\"},",
+                "        \"status\": {\"type\": \"string\"}",
+                "      }",
+                "    }",
+                "  }",
+                "}"
+        };
+        Path tmp = Files.createTempFile("swagger-sample", ".json");
+        Files.write(tmp, String.join("\n", lines).getBytes(StandardCharsets.UTF_8));
+        tmp.toFile().deleteOnExit();
+        return new URL("file:///" + tmp.toString().replace("\\", "/"));
     }
 
 
